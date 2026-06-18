@@ -22,5 +22,5 @@ This project was built as an assessment submission for the Product Management Tr
 
 1. **Clone the repository:**
    ```bash
-   git clone <your-github-repo-url>
-   cd <your-repo-directory>
+   git clone https://github.com/MachineLearnerSatyam/Fact-Checking-Agent.git
+   cd fact-check-agent
