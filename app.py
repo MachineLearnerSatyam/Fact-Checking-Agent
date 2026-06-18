@@ -109,7 +109,7 @@ def evaluate_claim(claim: Claim, search_results: str, api_key: str) -> Evaluatio
     return Evaluation(**json.loads(response.choices[0].message.content))
 
 # --- Main UI ---
-st.title("🛡️ Automated Fact-Checking Agent")
+st.title("🛡️ Fact-Checking Agent")
 st.markdown("Upload a document, run the verification pipeline, and generate a professional intelligence report.")
 
 # Sidebar
@@ -132,39 +132,40 @@ with st.sidebar:
 
 uploaded_file = st.file_uploader("Upload PDF Document", type="pdf")
 
+# Persistent Start button placed below the uploader
+start_request = st.button("🚀 Start Verification", type="primary", use_container_width=True)
+
 if uploaded_file is not None:
     if not groq_key or not tavily_key:
         st.warning("⚠️ Please provide your Groq and Tavily API keys in the sidebar.")
         st.stop()
 
-    # --- STEP 1: The Start Button ---
-    if not st.session_state.pipeline_complete:
-        if st.button("🚀 Start Verification Pipeline", type="primary", use_container_width=True):
-            
-            with st.spinner("Extracting text from PDF..."):
-                raw_text = extract_text_from_pdf(uploaded_file)
-            
-            with st.spinner("Analyzing text and extracting verifiable claims..."):
-                claims = extract_claims(raw_text, groq_key)
-            
-            if not claims:
-                st.info("No verifiable statistics found in the document.")
-                st.stop()
+    # Pipeline execution moved to persistent button; if clicked run here
+    if start_request and not st.session_state.pipeline_complete:
+        # Run validations, extract text, and process claims
+        with st.spinner("Extracting text from PDF..."):
+            raw_text = extract_text_from_pdf(uploaded_file)
 
+        with st.spinner("Analyzing text and extracting verifiable claims..."):
+            claims = extract_claims(raw_text, groq_key)
+
+        if not claims:
+            st.info("No verifiable statistics found in the document.")
+        else:
             results = []
             progress_text = "Verifying claims against live web data..."
             my_bar = st.progress(0, text=progress_text)
-            
+
             for i, claim in enumerate(claims):
                 my_bar.progress((i + 1) / len(claims), text=f"Processing Claim #{claim.id}...")
                 search_data = search_web(claim.claim_text, tavily_key)
                 evaluation = evaluate_claim(claim, search_data, groq_key)
-                
+
                 results.append({"claim": claim, "evaluation": evaluation})
                 time.sleep(1.5) # Slight pause to ensure stable API connections
-                
+
             my_bar.empty()
-            
+
             st.session_state.results_data = results
             st.session_state.pipeline_complete = True
             st.rerun()
